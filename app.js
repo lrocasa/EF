@@ -5,7 +5,7 @@
 // --- CONFIGURACIÓN Y ESTADO GLOBAL ---
 const DEFAULT_PIN = "1234";
 let activeSession = null; // Sesión activa para el registro de alumnos
-let selectedEmotion = null; // Emoción seleccionada por el alumno actual
+let selectedEmotions = []; // Emociones seleccionadas por el alumno actual (Array)
 let pinBuffer = ""; // Buffer para el login de PIN
 
 // Emociones disponibles en la aplicación
@@ -139,11 +139,10 @@ function renderSetupRecentSessions() {
   sessions.forEach(session => {
     const badge = document.createElement("div");
     badge.className = "session-badge";
-    badge.textContent = `${session.group} - ${session.activity}`;
+    badge.textContent = `${session.group} (${formatDate(session.date)})`;
     badge.title = `Clase del ${formatDate(session.date)}`;
     badge.addEventListener("click", () => {
       document.getElementById("setup-group").value = session.group;
-      document.getElementById("setup-activity").value = session.activity;
     });
     container.appendChild(badge);
   });
@@ -151,25 +150,23 @@ function renderSetupRecentSessions() {
 
 function startSession() {
   const group = document.getElementById("setup-group").value;
-  const activity = document.getElementById("setup-activity").value;
   let dateVal = document.getElementById("setup-date").value;
   
   if (!dateVal) {
     dateVal = new Date().toISOString().split('T')[0]; // Fecha de hoy local
   }
 
-  if (!group || !activity) {
-    alert("Por favor, selecciona un grupo y una actividad.");
+  if (!group) {
+    alert("Por favor, selecciona un grupo.");
     return;
   }
 
   // Generar ID único para la sesión
-  const sessionId = `${group.replace(/\s+/g, '')}_${activity.replace(/\s+/g, '')}_${dateVal}`;
+  const sessionId = `${group.replace(/\s+/g, '')}_${dateVal}`;
   
   activeSession = {
     id: sessionId,
     group: group,
-    activity: activity,
     date: dateVal
   };
 
@@ -177,8 +174,8 @@ function startSession() {
   DB.addSession(activeSession);
 
   // Configurar pantalla de estudiantes
-  document.getElementById("student-session-title").textContent = `${activeSession.group} • ${activeSession.activity}`;
-  document.getElementById("student-session-date").textContent = `Clase del ${formatDate(activeSession.date)}`;
+  document.getElementById("student-session-title").textContent = activeSession.group;
+  document.getElementById("student-session-date").textContent = `Sesión del ${formatDate(activeSession.date)}`;
 
   resetStudentForm();
   showView("student");
@@ -207,49 +204,79 @@ function renderEmotionsGrid() {
 }
 
 function selectEmotionCard(emotionId) {
-  selectedEmotion = emotionId;
+  const idx = selectedEmotions.indexOf(emotionId);
+  const card = document.getElementById(`emotion-card-${emotionId}`);
   
-  // Quitar clase selected de todas
-  document.querySelectorAll(".emotion-card").forEach(card => {
-    card.classList.remove("selected");
-  });
-
-  // Añadir a la seleccionada
-  const selected = document.getElementById(`emotion-card-${emotionId}`);
-  if (selected) {
-    selected.classList.add("selected");
+  if (idx > -1) {
+    selectedEmotions.splice(idx, 1);
+    if (card) card.classList.remove("selected");
+  } else {
+    selectedEmotions.push(emotionId);
+    if (card) card.classList.add("selected");
   }
 
-  // Activar botón de enviar
+  checkSubmitButtonState();
+}
+
+function checkSubmitButtonState() {
+  const nameInput = document.getElementById("student-name");
+  const nameVal = nameInput ? nameInput.value.trim() : "";
+  const hasEmotions = selectedEmotions.length > 0;
+  
   const submitBtn = document.getElementById("btn-submit-emotion");
-  submitBtn.disabled = false;
+  if (submitBtn) {
+    submitBtn.disabled = !(nameVal && hasEmotions);
+  }
 }
 
 function sendToGoogleSheets(url, log) {
+  const emotionsMap = {
+    "joy": "Alegre / Motivado 😊",
+    "energy": "Con Energía ⚡",
+    "calm": "Calmado / Satisfecho 🧘",
+    "tired": "Cansado / Agotado 😴",
+    "bored": "Aburrido 😐",
+    "angry": "Frustrado / Enfadado 😤"
+  };
+  const emotionsString = log.emotions.map(id => emotionsMap[id] || id).join(", ");
+
+  const payload = {
+    timestamp: log.timestamp,
+    studentName: log.studentName,
+    sessionGroup: log.sessionGroup,
+    emotions: emotionsString,
+    likedMost: log.likedMost,
+    feedback: log.feedback
+  };
+
   fetch(url, {
     method: "POST",
     mode: "no-cors",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(log)
+    body: JSON.stringify(payload)
   })
   .then(() => console.log("Datos enviados a Google Sheets."))
   .catch(err => console.error("Error al enviar a Google Sheets:", err));
 }
 
 function submitEmotionLog() {
-  if (!activeSession || !selectedEmotion) return;
+  const nameInput = document.getElementById("student-name");
+  const studentName = nameInput ? nameInput.value.trim() : "";
+  if (!activeSession || selectedEmotions.length === 0 || !studentName) return;
 
+  const likedMost = document.getElementById("student-liked-most").value.trim();
   const feedback = document.getElementById("student-feedback").value.trim();
   
   const log = {
     id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
     sessionId: activeSession.id,
     sessionGroup: activeSession.group,
-    sessionActivity: activeSession.activity,
     sessionDate: activeSession.date,
-    emotionId: selectedEmotion,
+    studentName: studentName,
+    emotions: [...selectedEmotions],
+    likedMost: likedMost,
     feedback: feedback,
     timestamp: new Date().toISOString()
   };
@@ -287,12 +314,19 @@ function backToRecording() {
 }
 
 function resetStudentForm() {
-  selectedEmotion = null;
-  document.getElementById("student-feedback").value = "";
+  selectedEmotions = [];
+  const nameInput = document.getElementById("student-name");
+  if (nameInput) nameInput.value = "";
+  
+  const likedMostInput = document.getElementById("student-liked-most");
+  if (likedMostInput) likedMostInput.value = "";
+
+  const feedbackInput = document.getElementById("student-feedback");
+  if (feedbackInput) feedbackInput.value = "";
   
   // Desactivar botón enviar
   const submitBtn = document.getElementById("btn-submit-emotion");
-  submitBtn.disabled = true;
+  if (submitBtn) submitBtn.disabled = true;
 
   // Quitar seleccionados visuales
   document.querySelectorAll(".emotion-card").forEach(card => {
@@ -442,7 +476,7 @@ function populateAdminFilters(sessions, logs) {
   sortedSessions.forEach(session => {
     const opt = document.createElement("option");
     opt.value = session.id;
-    opt.textContent = `${session.group} - ${session.activity} (${formatDate(session.date)})`;
+    opt.textContent = `${session.group} (${formatDate(session.date)})`;
     filterSession.appendChild(opt);
   });
 
@@ -486,12 +520,22 @@ function updateDashboardData() {
   const uniqueSessionsCount = new Set(filteredLogs.map(log => log.sessionId)).size;
 
   // Clima emocional: Porcentaje de emociones positivas (Alegre, Con Energía, Calmado)
+  let totalSelectedEmotions = 0;
+  let positiveCount = 0;
+  
+  filteredLogs.forEach(log => {
+    const logEmotions = Array.isArray(log.emotions) ? log.emotions : (log.emotionId ? [log.emotionId] : []);
+    totalSelectedEmotions += logEmotions.length;
+    logEmotions.forEach(emId => {
+      if (emId === "joy" || emId === "energy" || emId === "calm") {
+        positiveCount++;
+      }
+    });
+  });
+
   let emotionalClimatePct = 0;
-  if (totalResponses > 0) {
-    const positiveCount = filteredLogs.filter(log => 
-      log.emotionId === "joy" || log.emotionId === "energy" || log.emotionId === "calm"
-    ).length;
-    emotionalClimatePct = Math.round((positiveCount / totalResponses) * 100);
+  if (totalSelectedEmotions > 0) {
+    emotionalClimatePct = Math.round((positiveCount / totalSelectedEmotions) * 100);
   }
 
   // Actualizar en el HTML
@@ -513,9 +557,12 @@ function updateDashboardData() {
   const emotionCounts = {};
   EMOTIONS.forEach(em => { emotionCounts[em.id] = 0; });
   filteredLogs.forEach(log => {
-    if (emotionCounts[log.emotionId] !== undefined) {
-      emotionCounts[log.emotionId]++;
-    }
+    const logEmotions = Array.isArray(log.emotions) ? log.emotions : (log.emotionId ? [log.emotionId] : []);
+    logEmotions.forEach(emId => {
+      if (emotionCounts[emId] !== undefined) {
+        emotionCounts[emId]++;
+      }
+    });
   });
 
   // 3. Renderizar Gráfico de Barras SVG Dinámico
@@ -642,16 +689,15 @@ function renderFeedbackTable(logs) {
   const tbody = document.getElementById("feedback-table-body");
   tbody.innerHTML = "";
 
-  // Filtrar los logs que tengan feedback y ordenarlos por fecha más reciente
-  const logsWithFeedback = logs.filter(log => log.feedback !== "").sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  const sortedLogs = [...logs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-  if (logsWithFeedback.length === 0) {
+  if (sortedLogs.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5">
+        <td colspan="6">
           <div class="empty-state">
             <span class="empty-state-icon">💬</span>
-            <p>No hay comentarios ni valoraciones textuales registradas todavía.</p>
+            <p>No hay respuestas registradas todavía.</p>
           </div>
         </td>
       </tr>
@@ -659,21 +705,34 @@ function renderFeedbackTable(logs) {
     return;
   }
 
-  logsWithFeedback.forEach(log => {
-    const emotion = EMOTIONS.find(e => e.id === log.emotionId) || { label: log.emotionId, emoji: "❓" };
-    const row = document.createElement("tr");
+  sortedLogs.forEach(log => {
+    const logEmotions = Array.isArray(log.emotions) ? log.emotions : (log.emotionId ? [log.emotionId] : []);
+    
+    let emotionsBadgesHtml = "";
+    logEmotions.forEach(emId => {
+      const emotion = EMOTIONS.find(e => e.id === emId);
+      if (emotion) {
+        emotionsBadgesHtml += `
+          <span class="badge-emotion-inline ${emotion.id}" style="margin: 2px;">
+            <span>${emotion.emoji}</span>
+            <span>${emotion.label.split(" ")[0]}</span>
+          </span>
+        `;
+      }
+    });
 
+    const row = document.createElement("tr");
     row.innerHTML = `
       <td>${formatDateTime(log.timestamp)}</td>
-      <td><strong>${escapeHtml(log.sessionGroup)}</strong></td>
-      <td>${escapeHtml(log.sessionActivity)}</td>
+      <td><strong>${escapeHtml(log.studentName || "Anónimo")}</strong></td>
+      <td>${escapeHtml(log.sessionGroup)}</td>
       <td>
-        <span class="badge-emotion-inline ${emotion.id}">
-          <span>${emotion.emoji}</span>
-          <span>${emotion.label}</span>
-        </span>
+        <div style="display: flex; flex-wrap: wrap; gap: 2px;">
+          ${emotionsBadgesHtml || '<span style="color:var(--text-muted)">Ninguna</span>'}
+        </div>
       </td>
-      <td style="font-style: italic; color: #d8d3ff;">"${escapeHtml(log.feedback)}"</td>
+      <td style="color: #ffffff; max-width: 250px; overflow-wrap: break-word;">${log.likedMost ? escapeHtml(log.likedMost) : '<span style="color:var(--text-muted); font-style:italic;">-</span>'}</td>
+      <td style="font-style: italic; color: #d8d3ff; max-width: 250px; overflow-wrap: break-word;">${log.feedback ? `"${escapeHtml(log.feedback)}"` : '<span style="color:var(--text-muted); font-style:italic;">-</span>'}</td>
     `;
 
     tbody.appendChild(row);
@@ -687,19 +746,34 @@ function loadDemoData() {
   if (!confirm("¿Deseas cargar datos simulados de prueba para visualizar el panel de control?")) return;
 
   const demoSessions = [
-    { id: "1ESO_Futbol_2026-06-22", group: "1º ESO A", activity: "Fútbol", date: "2026-06-22" },
-    { id: "2ESO_Danza_2026-06-23", group: "2º ESO B", activity: "Expresión Corporal / Danza", date: "2026-06-23" },
-    { id: "3ESO_Baloncesto_2026-06-24", group: "3º ESO A", activity: "Baloncesto", date: "2026-06-24" },
-    { id: "4ESO_Resistencia_2026-06-25", group: "4º ESO B", activity: "Resistencia / HIIT", date: "2026-06-25" }
+    { id: "1ESO_2026-06-22", group: "1º ESO A", date: "2026-06-22" },
+    { id: "2ESO_2026-06-23", group: "2º ESO B", date: "2026-06-23" },
+    { id: "3ESO_2026-06-24", group: "3º ESO A", date: "2026-06-24" },
+    { id: "4ESO_2026-06-25", group: "4º ESO B", date: "2026-06-25" }
+  ];
+
+  const demoNames = ["Sofía", "Mateo", "Lucía", "Lucas", "Martina", "Leo", "María", "Hugo", "Paula", "Daniel", "Sara", "Alejandro", "Daniela", "Álvaro", "Alba", "Adrián", "Irene", "David", "Emma", "Martín", "Carmen", "Mario", "Julia", "Manuel", "Lola", "Pablo", "Clara", "Javier"];
+
+  const likedMostPool = [
+    "El calentamiento con música",
+    "El partido final",
+    "Los juegos de relevo",
+    "El circuito de fuerza",
+    "Poder jugar con mis compañeros libres",
+    "La relajación al final de la clase",
+    "Cuando el profesor nos ha enseñado a botar con las dos manos",
+    "Hacer el pino en la colchoneta",
+    "Correr el test de Cooper porque me he superado",
+    "Los estiramientos en grupo"
   ];
 
   const demoComments = {
-    joy: ["¡Me ha encantado la clase de fútbol de hoy!", "Ha sido súper divertido trabajar en equipo.", "¡Por fin jugamos baloncesto!", "El profesor ha preparado unos juegos geniales hoy.", "¡Súper divertido!"],
-    energy: ["Me he cansado pero me he sentido con mucha fuerza.", "¡He corrido un montón!", "¡Buen entrenamiento de resistencia!", "Me gusta cuando hacemos circuitos de ejercicio intenso."],
-    calm: ["La sesión de relajación al final ha sido increíble.", "Me he sentido muy a gusto hoy.", "He aprendido a concentrarme mejor en los pases.", "Clase muy tranquila y productiva."],
-    tired: ["Me duelen las piernas por correr tanto.", "Demasiado intenso el HIIT de hoy, estoy agotado.", "Uf, qué calor y qué cansancio.", "Hoy ha sido muy exigente físicamente."],
-    bored: ["No me gusta mucho el fútbol, preferiría otro deporte.", "Hemos esperado mucho tiempo en las filas para tirar.", "Hoy la clase ha sido un poco monótona."],
-    angry: ["Se han enfadado conmigo por perder el balón.", "El partido ha sido muy injusto y el árbitro no ha visto las faltas.", "No me ha gustado el comportamiento de mis compañeros de equipo hoy."]
+    joy: ["¡Ha sido genial hoy!", "Me he divertido mucho.", "¡Súper chulo!", "La clase se me ha pasado volando.", "Me encanta la educación física."],
+    energy: ["Me siento muy fuerte.", "¡He corrido un montón!", "¡Qué buena sesión para activarse!", "Vengo cansado pero con ganas de más."],
+    calm: ["Me he sentido súper a gusto hoy.", "Muy relajante el final de la clase.", "Me ha gustado el ambiente tranquilo.", "He trabajado bien y sin agobios."],
+    tired: ["Estoy muertísimo de correr.", "Hoy ha sido muy cansado físicamente.", "Uf, necesito beber mucha agua.", "Ufff qué paliza hoy."],
+    bored: ["Un poco aburrido hoy.", "Hemos esperado mucho tiempo parados.", "No me motivaba mucho el juego de hoy.", "Preferiría hacer deporte libre."],
+    angry: ["Se han enfadado conmigo por fallar.", "Ha habido muchas trampas en el juego.", "Me he enfadado al perder el partido.", "No nos ponemos de acuerdo en el equipo."]
   };
 
   const demoLogs = [];
@@ -707,43 +781,27 @@ function loadDemoData() {
   demoSessions.forEach(session => {
     DB.addSession(session);
     
-    // Generar entre 15 y 30 respuestas de alumnos por sesión
     const responsesCount = 15 + Math.floor(Math.random() * 16);
-    
-    // Distribuir emociones según el tipo de actividad para hacerlo realista
-    let weights = { joy: 0.3, energy: 0.3, calm: 0.2, tired: 0.1, bored: 0.05, angry: 0.05 }; // Default
-    
-    if (session.activity === "Resistencia / HIIT") {
-      weights = { joy: 0.15, energy: 0.25, calm: 0.1, tired: 0.4, bored: 0.05, angry: 0.05 }; // Más cansados
-    } else if (session.activity === "Expresión Corporal / Danza") {
-      weights = { joy: 0.2, energy: 0.15, calm: 0.4, tired: 0.1, bored: 0.1, angry: 0.05 }; // Más calmados
-    } else if (session.activity === "Fútbol") {
-      weights = { joy: 0.4, energy: 0.3, calm: 0.05, tired: 0.1, bored: 0.05, angry: 0.1 }; // Más alegres pero algo de frustración
-    }
+    let weights = { joy: 0.35, energy: 0.25, calm: 0.2, tired: 0.1, bored: 0.05, angry: 0.05 };
 
     for (let i = 0; i < responsesCount; i++) {
-      // Elegir emoción según pesos
-      const r = Math.random();
-      let selectedId = "joy";
-      let cumulative = 0;
+      const numEmotions = Math.random() < 0.25 ? 2 : 1; 
+      const selectedIds = [];
+      const pool = ["joy", "energy", "calm", "tired", "bored", "angry"];
       
-      for (const [emId, weight] of Object.entries(weights)) {
-        cumulative += weight;
-        if (r <= cumulative) {
-          selectedId = emId;
-          break;
+      for(let j=0; j<numEmotions; j++) {
+        const em = pool[Math.floor(Math.random() * pool.length)];
+        if(!selectedIds.includes(em)) {
+          selectedIds.push(em);
         }
       }
+      
+      const primaryId = selectedIds[0];
+      const comment = Math.random() < 0.35 ? demoComments[primaryId][Math.floor(Math.random() * demoComments[primaryId].length)] : "";
+      const liked = Math.random() < 0.75 ? likedMostPool[Math.floor(Math.random() * likedMostPool.length)] : "";
+      const name = demoNames[Math.floor(Math.random() * demoNames.length)] + " " + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + ".";
 
-      // Decidir si tiene comentario (30% de probabilidad)
-      let comment = "";
-      if (Math.random() < 0.35) {
-        const commentList = demoComments[selectedId];
-        comment = commentList[Math.floor(Math.random() * commentList.length)];
-      }
-
-      // Timestamp aleatorio dentro del día de la clase
-      const hour = 9 + Math.floor(Math.random() * 5); // Entre 9:00 y 14:00
+      const hour = 9 + Math.floor(Math.random() * 5); 
       const minute = Math.floor(Math.random() * 60);
       const timestamp = `${session.date}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00Z`;
 
@@ -751,20 +809,18 @@ function loadDemoData() {
         id: 'log_demo_' + Math.random().toString(36).substr(2, 9),
         sessionId: session.id,
         sessionGroup: session.group,
-        sessionActivity: session.activity,
         sessionDate: session.date,
-        emotionId: selectedId,
+        studentName: name,
+        emotions: selectedIds,
+        likedMost: liked,
         feedback: comment,
         timestamp: timestamp
       });
     }
   });
 
-  // Guardar datos
   DB.saveLogs(demoLogs);
   alert("¡Datos simulados cargados con éxito!");
-  
-  // Recargar vista
   renderAdminDashboard();
 }
 
@@ -776,20 +832,29 @@ function exportDataToCsv() {
     return;
   }
 
-  // Definir cabeceras
-  let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // Byte Order Mark para compatibilidad Excel con acentos
-  csvContent += "ID Registro;Fecha Registro;Grupo;Actividad;Fecha Clase;ID Emocion;Emocion;Comentario\r\n";
+  let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+  csvContent += "ID Registro;Fecha Registro;Nombre;Grupo;Fecha Clase;Emociones;Que le gusto mas;Comentarios\r\n";
 
-  // Rellenar filas
   logs.forEach(log => {
-    const emotion = EMOTIONS.find(e => e.id === log.emotionId) || { label: log.emotionId };
+    const logEmotions = Array.isArray(log.emotions) ? log.emotions : (log.emotionId ? [log.emotionId] : []);
+    const emotionsMap = {
+      "joy": "Alegre / Motivado 😊",
+      "energy": "Con Energía ⚡",
+      "calm": "Calmado / Satisfecho 🧘",
+      "tired": "Cansado / Agotado 😴",
+      "bored": "Aburrido 😐",
+      "angry": "Frustrado / Enfadado 😤"
+    };
+    const emotionsLabels = logEmotions.map(id => emotionsMap[id] || id).join(", ");
+    
     const dateFormatted = formatDateTime(log.timestamp);
-    const feedbackEscaped = log.feedback.replace(/"/g, '""'); // Escapar comillas dobles
+    const nameEscaped = (log.studentName || "Anónimo").replace(/"/g, '""');
+    const likedEscaped = (log.likedMost || "").replace(/"/g, '""');
+    const feedbackEscaped = (log.feedback || "").replace(/"/g, '""');
 
-    csvContent += `"${log.id}";"${dateFormatted}";"${log.sessionGroup}";"${log.sessionActivity}";"${log.sessionDate}";"${log.emotionId}";"${emotion.label}";"${feedbackEscaped}"\r\n`;
+    csvContent += `"${log.id}";"${dateFormatted}";"${nameEscaped}";"${log.sessionGroup}";"${log.sessionDate}";"${emotionsLabels}";"${likedEscaped}";"${feedbackEscaped}"\r\n`;
   });
 
-  // Crear elemento de descarga
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
@@ -889,6 +954,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-submit-emotion").addEventListener("click", () => {
     submitEmotionLog();
   });
+
+  // --- Validar Nombre en Alumno ---
+  const studentNameInput = document.getElementById("student-name");
+  if (studentNameInput) {
+    studentNameInput.addEventListener("input", checkSubmitButtonState);
+  }
 
   // --- Filtros Dashboard ---
   document.getElementById("filter-session").addEventListener("change", updateDashboardData);

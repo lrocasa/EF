@@ -67,22 +67,7 @@
                 </select>
               </div>
               
-              <div class="form-group">
-                <label for="setup-activity">Actividad / Deporte</label>
-                <select id="setup-activity" class="form-select" required>
-                  <option value="" disabled selected>Selecciona la actividad...</option>
-                  <option value="Baloncesto">🏀 Baloncesto</option>
-                  <option value="Fútbol">⚽ Fútbol</option>
-                  <option value="Voleibol">🏐 Voleibol</option>
-                  <option value="Atletismo / Carrera">🏃 Atletismo / Carrera</option>
-                  <option value="Expresión Corporal / Danza">💃 Expresión Corporal / Danza</option>
-                  <option value="Gimnasia Deportiva">🤸 Gimnasia Deportiva</option>
-                  <option value="Juegos Cooperativos">🤝 Juegos Cooperativos</option>
-                  <option value="Resistencia / HIIT">⏱️ Resistencia / HIIT</option>
-                  <option value="Senderismo / Orientación">🗺️ Senderismo / Orientación</option>
-                  <option value="Otro / Libre">✨ Otro / Libre</option>
-                </select>
-              </div>
+
 
               <div class="form-group" style="display: none;">
                 <label for="setup-date">Fecha de la clase</label>
@@ -103,7 +88,7 @@
     <section id="view-student" class="view-section">
       <div class="student-title-bar">
         <div class="session-info-display">
-          <h3 id="student-session-title">1º ESO A - Baloncesto</h3>
+          <h3 id="student-session-title">1º ESO A</h3>
           <p id="student-session-date">Sesión de hoy</p>
         </div>
         <button id="btn-finish-recording" class="btn btn-danger">
@@ -112,17 +97,29 @@
       </div>
 
       <div class="glass-panel" style="text-align: center; padding: 2rem;">
+        <div class="optional-feedback" style="margin-bottom: 2rem; max-width: 100%;">
+          <div class="form-group" style="text-align: left;">
+            <label for="student-name">Escribe tu Nombre / Apodo (Obligatorio)</label>
+            <input type="text" id="student-name" class="form-input" placeholder="Introduce tu nombre..." required autocomplete="off">
+          </div>
+        </div>
+
         <h2 style="font-size: 2rem; margin-bottom: 0.5rem; font-weight: 800;">¿Cómo te has sentido en la clase de hoy?</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 2rem;">Haz clic en la emoción que mejor represente tu experiencia hoy.</p>
+        <p style="color: var(--text-secondary); margin-bottom: 2rem;">Puedes elegir todas las emociones que sientas.</p>
         
         <div class="emotions-grid" id="emotions-container">
           <!-- Las tarjetas de emoción se generarán con JavaScript para mayor modularidad -->
         </div>
 
         <div class="optional-feedback">
+          <div class="form-group" style="text-align: left; margin-bottom: 1.5rem;">
+            <label for="student-liked-most">¿Qué es lo que más te ha gustado de la clase de hoy?</label>
+            <textarea id="student-liked-most" class="textarea-feedback" style="height: 60px;" placeholder="¿Qué ejercicio, juego o parte de la clase te ha gustado más?"></textarea>
+          </div>
+
           <div class="form-group" style="text-align: left;">
-            <label for="student-feedback">¿Quieres contarnos algo más sobre la clase? (Opcional)</label>
-            <textarea id="student-feedback" class="textarea-feedback" placeholder="¿Por qué te has sentido así? ¿Qué te ha gustado más o menos?"></textarea>
+            <label for="student-feedback">Otros comentarios o notas (Opcional)</label>
+            <textarea id="student-feedback" class="textarea-feedback" style="height: 60px;" placeholder="¿Por qué te has sentido así? ¿Hay algo más que quieras decirle al profesor?"></textarea>
           </div>
         </div>
 
@@ -287,10 +284,11 @@
             <thead>
               <tr>
                 <th>Fecha / Hora</th>
+                <th>Nombre</th>
                 <th>Grupo</th>
-                <th>Actividad</th>
-                <th>Emoción</th>
-                <th>Comentario / Notas</th>
+                <th>Emociones</th>
+                <th>Lo que más le gustó</th>
+                <th>Comentarios / Notas</th>
               </tr>
             </thead>
             <tbody id="feedback-table-body">
@@ -303,7 +301,7 @@
 
     <!-- Pie de página -->
     <footer class="app-footer">
-      <p>EmociFísica v1.0.0 — Desarrollado para clases de Educación Física activas y emocionalmente seguras.</p>
+      <p>EmociFísica v2.0.0 — Desarrollado para clases de Educación Física activas y emocionalmente seguras.</p>
     </footer>
 
   </div>
