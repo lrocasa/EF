@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmociFísica - Registro Emocional en Educación Física</title>
+  <meta name="description" content="Una aplicación interactiva y premium para que el alumnado registre sus emociones y sensaciones físicas al finalizar la clase de Educación Física, permitiendo al profesorado analizar el clima emocional.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+  <div class="app-container">
+    
+    <!-- Cabecera Principal -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-icon" id="brand-logo">⚡</span>
+        <div>
+          <h1>EmociFísica</h1>
+          <div class="brand-subtitle">Sentir en Movimiento</div>
+        </div>
+      </div>
+      <nav class="app-nav">
+        <!-- Botones para alternar vistas (el de admin requerirá PIN) -->
+        <button id="btn-nav-student" class="btn btn-primary" style="display: none;">
+          <span>📝</span> Registrar Clase
+        </button>
+        <button id="btn-nav-admin" class="btn">
+          <span>📊</span> Panel Profesor
+        </button>
+      </nav>
+    </header>
+
+    <!-- ==================== 1. VISTA DE BIENVENIDA / CONFIGURACIÓN DE SESIÓN ==================== -->
+    <section id="view-setup" class="view-section active">
+      <div class="glass-panel">
+        <div class="setup-grid">
+          
+          <div class="setup-info-card">
+            <h2>¿Listo para la clase de hoy?</h2>
+            <p>Configura la sesión de Educación Física antes de empezar. El alumnado registrará sus emociones en esta pantalla cuando acabe la clase.</p>
+            
+            <div class="form-group">
+              <label>Clases Recientes</label>
+              <div class="session-badge-list" id="recent-sessions-list">
+                <!-- Se poblará dinámicamente con JavaScript -->
+              </div>
+            </div>
+          </div>
+          
+          <div class="setup-form-card">
+            <form id="setup-session-form" onsubmit="return false;">
+              <div class="form-group">
+                <label for="setup-group">Grupo / Curso</label>
+                <select id="setup-group" class="form-select" required>
+                  <option value="" disabled selected>Selecciona el grupo...</option>
+                  <option value="1º ESO A">1º ESO A</option>
+                  <option value="1º ESO B">1º ESO B</option>
+                  <option value="2º ESO A">2º ESO A</option>
+                  <option value="2º ESO B">2º ESO B</option>
+                  <option value="3º ESO A">3º ESO A</option>
+                  <option value="3º ESO B">3º ESO B</option>
+                  <option value="4º ESO A">4º ESO A</option>
+                  <option value="4º ESO B">4º ESO B</option>
+                  <option value="1º Bachillerato">1º Bachillerato</option>
+                  <option value="2º Bachillerato">2º Bachillerato</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="setup-activity">Actividad / Deporte</label>
+                <select id="setup-activity" class="form-select" required>
+                  <option value="" disabled selected>Selecciona la actividad...</option>
+                  <option value="Baloncesto">🏀 Baloncesto</option>
+                  <option value="Fútbol">⚽ Fútbol</option>
+                  <option value="Voleibol">🏐 Voleibol</option>
+                  <option value="Atletismo / Carrera">🏃 Atletismo / Carrera</option>
+                  <option value="Expresión Corporal / Danza">💃 Expresión Corporal / Danza</option>
+                  <option value="Gimnasia Deportiva">🤸 Gimnasia Deportiva</option>
+                  <option value="Juegos Cooperativos">🤝 Juegos Cooperativos</option>
+                  <option value="Resistencia / HIIT">⏱️ Resistencia / HIIT</option>
+                  <option value="Senderismo / Orientación">🗺️ Senderismo / Orientación</option>
+                  <option value="Otro / Libre">✨ Otro / Libre</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="display: none;">
+                <label for="setup-date">Fecha de la clase</label>
+                <input type="date" id="setup-date" class="form-input">
+              </div>
+
+              <button type="submit" id="btn-start-session" class="btn btn-primary btn-large" style="width: 100%; justify-content: center;">
+                Comenzar Registro 🚀
+              </button>
+            </form>
+          </div>
+          
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 2. VISTA DE REGISTRO DE EMOCIONES (VISTA ALUMNO) ==================== -->
+    <section id="view-student" class="view-section">
+      <div class="student-title-bar">
+        <div class="session-info-display">
+          <h3 id="student-session-title">1º ESO A - Baloncesto</h3>
+          <p id="student-session-date">Sesión de hoy</p>
+        </div>
+        <button id="btn-finish-recording" class="btn btn-danger">
+          <span>🔒</span> Cerrar Sesión
+        </button>
+      </div>
+
+      <div class="glass-panel" style="text-align: center; padding: 2rem;">
+        <h2 style="font-size: 2rem; margin-bottom: 0.5rem; font-weight: 800;">¿Cómo te has sentido en la clase de hoy?</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 2rem;">Haz clic en la emoción que mejor represente tu experiencia hoy.</p>
+        
+        <div class="emotions-grid" id="emotions-container">
+          <!-- Las tarjetas de emoción se generarán con JavaScript para mayor modularidad -->
+        </div>
+
+        <div class="optional-feedback">
+          <div class="form-group" style="text-align: left;">
+            <label for="student-feedback">¿Quieres contarnos algo más sobre la clase? (Opcional)</label>
+            <textarea id="student-feedback" class="textarea-feedback" placeholder="¿Por qué te has sentido así? ¿Qué te ha gustado más o menos?"></textarea>
+          </div>
+        </div>
+
+        <div class="student-submit-area">
+          <button id="btn-submit-emotion" class="btn btn-primary btn-large" disabled>
+            Enviar mi Emoción 🌟
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 3. VISTA DE AGRADECIMIENTO / PANTALLA CONFIRMACIÓN ==================== -->
+    <section id="view-thankyou" class="view-section">
+      <div class="glass-panel thank-you-card">
+        <div class="confetti-wrapper" id="confetti-container">
+          <!-- Confetti generado por JS -->
+        </div>
+        <div class="thank-you-emoji">🎉</div>
+        <h2>¡Muchas gracias por compartir!</h2>
+        <p>Tu opinión nos ayuda a preparar mejores clases de Educación Física. Pasa la tablet o el ordenador al siguiente compañero.</p>
+        
+        <div class="countdown-bar-container">
+          <div class="countdown-bar-fill"></div>
+        </div>
+        <button id="btn-skip-countdown" class="btn" style="margin-top: 1rem;">
+          Siguiente Alumno ➡️
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== 4. VISTA DE AUTENTICACIÓN (LOGIN PIN) ==================== -->
+    <section id="view-auth" class="view-section">
+      <div class="glass-panel auth-panel">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🔐</div>
+        <h2>Acceso Docente</h2>
+        <p>Introduce el PIN de seguridad para acceder al Panel del Profesor (PIN por defecto: 1234).</p>
+        
+        <div class="pin-input-group">
+          <input type="password" class="pin-digit" maxlength="1" id="pin-1" autocomplete="new-password">
+          <input type="password" class="pin-digit" maxlength="1" id="pin-2" autocomplete="new-password">
+          <input type="password" class="pin-digit" maxlength="1" id="pin-3" autocomplete="new-password">
+          <input type="password" class="pin-digit" maxlength="1" id="pin-4" autocomplete="new-password">
+        </div>
+        
+        <div style="display: flex; gap: 0.5rem; justify-content: center;">
+          <button id="btn-auth-cancel" class="btn">Cancelar</button>
+          <button id="btn-auth-submit" class="btn btn-primary">Entrar</button>
+        </div>
+        <p id="auth-error-message" style="color: var(--danger-color); margin-top: 1rem; font-weight: 600; display: none;">¡PIN incorrecto! Inténtalo de nuevo.</p>
+      </div>
+    </section>
+
+    <!-- ==================== 5. VISTA DE PANEL DEL PROFESOR (DASHBOARD) ==================== -->
+    <section id="view-admin" class="view-section">
+      <div class="admin-header-bar">
+        <div>
+          <h2>Panel del Profesor</h2>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;" id="admin-subtitle-sessions">Análisis de la actividad y del clima emocional en clase</p>
+        </div>
+        <div class="admin-controls">
+          <button id="btn-admin-demo-data" class="btn">
+            <span>⚙️</span> Cargar Datos de Prueba
+          </button>
+          <button id="btn-admin-export" class="btn">
+            <span>📥</span> Exportar Datos (CSV)
+          </button>
+          <button id="btn-admin-reset" class="btn btn-danger">
+            <span>🗑️</span> Borrar Todo
+          </button>
+        </div>
+      </div>
+
+      <!-- Métricas Resumen -->
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-icon">👥</div>
+          <div class="metric-info">
+            <h4>Total Respuestas</h4>
+            <div class="metric-val" id="metric-responses-count">0</div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">📅</div>
+          <div class="metric-info">
+            <h4>Sesiones Registradas</h4>
+            <div class="metric-val" id="metric-sessions-count">0</div>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">😊</div>
+          <div class="metric-info">
+            <h4>Clima Emocional</h4>
+            <div class="metric-val" id="metric-emotional-climate">0%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conexión con Google Sheets -->
+      <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 2rem;">
+        <h3 style="font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🟢</span> Conexión con Google Sheets (Opcional)
+        </h3>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+          Introduce la URL de tu Web App de Google Apps Script para guardar todas las respuestas de los alumnos en una hoja de cálculo en la nube en tiempo real.
+        </p>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <input type="url" id="admin-sheets-url" class="form-input" style="flex-grow: 1; min-width: 250px;" placeholder="https://script.google.com/macros/s/.../exec">
+          <button id="btn-save-sheets-url" class="btn btn-primary">Guardar Enlace</button>
+        </div>
+      </div>
+
+      <!-- Filtro del Dashboard -->
+      <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 2rem;">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+          <div class="form-group" style="margin-bottom: 0; flex-grow: 1; min-width: 200px;">
+            <label for="filter-session">Filtrar por Sesión</label>
+            <select id="filter-session" class="form-select">
+              <option value="all">Todas las sesiones</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0; flex-grow: 1; min-width: 200px;">
+            <label for="filter-group">Filtrar por Grupo</label>
+            <select id="filter-group" class="form-select">
+              <option value="all">Todos los grupos</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráficos y Desglose -->
+      <div class="dashboard-grid">
+        <!-- Gráfico de barras interactivo -->
+        <div class="glass-panel">
+          <div class="chart-container">
+            <div class="chart-header">
+              <h3>Distribución de Emociones</h3>
+              <span style="color: var(--text-secondary); font-size: 0.85rem;">En base a filtros seleccionados</span>
+            </div>
+            
+            <svg class="svg-bar-chart" id="emotion-chart" viewBox="0 0 500 250">
+              <!-- Renderizado dinámico con JS -->
+            </svg>
+          </div>
+        </div>
+
+        <!-- Desglose Porcentual -->
+        <div class="glass-panel">
+          <div class="chart-header">
+            <h3>Porcentaje</h3>
+          </div>
+          <div class="emotion-breakdown-list" id="emotion-breakdown-container">
+            <!-- Se poblará con JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Comentarios y Feedback Reciente -->
+      <div class="glass-panel feedback-section">
+        <h3>Comentarios y Observaciones del Alumnado</h3>
+        <div class="feedback-table-container">
+          <table class="feedback-table" id="feedback-table">
+            <thead>
+              <tr>
+                <th>Fecha / Hora</th>
+                <th>Grupo</th>
+                <th>Actividad</th>
+                <th>Emoción</th>
+                <th>Comentario / Notas</th>
+              </tr>
+            </thead>
+            <tbody id="feedback-table-body">
+              <!-- Se poblará con JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pie de página -->
+    <footer class="app-footer">
+      <p>EmociFísica v1.0.0 — Desarrollado para clases de Educación Física activas y emocionalmente seguras.</p>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
